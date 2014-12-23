@@ -197,6 +197,7 @@ public class SecuredSample extends HttpServlet {
 					"application/jwt", "utf-8");
 			putMethod.setRequestEntity(entity);
 
+			log.info("Sending encrypted JWT with the payload : " + payload);
 			int resultCode = client.executeMethod(putMethod);
 			String result = readPayload(putMethod.getResponseBodyAsStream());
 
