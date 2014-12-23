@@ -80,36 +80,48 @@ public class SecuredSample extends HttpServlet {
 			throws ServletException, IOException {
 		processRequest(req, resp);
 	}
-	
-	private void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException{
+
+	private void processRequest(HttpServletRequest req, HttpServletResponse resp)
+			throws IOException, ServletException {
 		String cmd;
 		String salary;
-		
+		// simple request processing based on url parameters
 		cmd = req.getParameter("cmd");
 		if (cmd == null || "get".equals(cmd)) {
 			sendGETRequest(req, resp);
 			return;
 		}
-		
+
 		salary = (String) req.getParameter("sal");
 		if (salary == null) {
 			salary = "9999";
 		}
-		
+
 		if ("update".equals(cmd)) {
 			sendPUTRequest(req, resp, salary);
 			return;
 		}
 	}
 
+	/***
+	 * Sends a GET request to the endpoint
+	 * 
+	 * @param req
+	 *            - request object
+	 * @param resp
+	 *            - response object
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void sendGETRequest(HttpServletRequest req, HttpServletResponse resp)
-			throws IOException {
+			throws IOException, ServletException {
 		PrintWriter out = resp.getWriter();
 		KeyPair clientKeyPair;
 		try {
 			clientKeyPair = loadClientKeyPair();
 			SignedJWT signedJWT = getSignedJWT(null, clientKeyPair.getPublic(),
 					clientKeyPair.getPrivate());
+			// create the new url with the token as a URL param
 			URL url = new URL(serviceURL + "employee/4001?tok="
 					+ signedJWT.serialize());
 
@@ -122,22 +134,46 @@ public class SecuredSample extends HttpServlet {
 			log.info("Result : " + result);
 			out.println(result);
 		} catch (KeyStoreException e) {
-			log.error("Error while loading client key pair", e);
+			String msg = "Error while loading client key pair";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (NoSuchAlgorithmException e) {
-			log.error("No such method exception", e);
+			String msg = "No such method exception";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (CertificateException e) {
-			log.error("Certificate exception", e);
+			String msg = "Certificate exception";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (UnrecoverableEntryException e) {
-			log.error("Unable to reacover entry", e);
+			String msg = "Unable to reacover entry";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (JOSEException e) {
-			log.error("Error while signing the JWT", e);
+			String msg = "Error while signing the JWT";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		}
 	}
 
+	/***
+	 * Sends a PUT request to the endpoint
+	 * 
+	 * @param req
+	 *            - request object
+	 * @param resp
+	 *            - response object
+	 * @param salary
+	 *            - a value to be used in the payload
+	 * @throws IOException
+	 * @throws ServletException
+	 */
 	private void sendPUTRequest(HttpServletRequest req,
-			HttpServletResponse resp, String salary) throws IOException {
+			HttpServletResponse resp, String salary) throws IOException,
+			ServletException {
 		PrintWriter out = resp.getWriter();
 		KeyPair clientKeyPair;
+		// create a new JSON payload
 		String payload = "{\n" + "  \"_putemployee\": {\n"
 				+ "    \"employeeNumber\" : \"4001\",\n"
 				+ "    \"lastName\": \"Samith\",\n"
@@ -145,11 +181,16 @@ public class SecuredSample extends HttpServlet {
 				+ "    \"email\": \"will@samith.com\",\n"
 				+ "    \"salary\": \"" + salary + "\"\n" + "  }\n" + "}";
 		try {
+			// load client's key pair from the key store
 			clientKeyPair = loadClientKeyPair();
 			SignedJWT signedJWT = getSignedJWT(payload,
 					clientKeyPair.getPublic(), clientKeyPair.getPrivate());
+
+			// load the server's public key from the trust store
 			PublicKey serverPublicKey = getServerPublicKey();
+			// encrypt the signed JWT using server'ss public key
 			String encryptedJWT = getEncryptedJWT(signedJWT, serverPublicKey);
+
 			HttpClient client = new HttpClient();
 			PutMethod putMethod = new PutMethod(serviceURL + "employee/");
 			RequestEntity entity = new StringRequestEntity(encryptedJWT,
@@ -161,31 +202,45 @@ public class SecuredSample extends HttpServlet {
 
 			out.println(result);
 		} catch (KeyStoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			String msg = "Error while loading client key pair";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			String msg = "No such method exception";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (CertificateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			String msg = "Certificate exception";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (UnrecoverableEntryException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			String msg = "Unable to reacover entry";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		} catch (JOSEException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			String msg = "Error while signing the JWT";
+			log.error(msg, e);
+			throw new ServletException(msg, e);
 		}
 	}
 
+	/***
+	 * Load the server's public key from the key store
+	 * 
+	 * @return
+	 * @throws KeyStoreException
+	 * @throws NoSuchAlgorithmException
+	 * @throws CertificateException
+	 * @throws IOException
+	 * @throws UnrecoverableEntryException
+	 */
 	private PublicKey getServerPublicKey() throws KeyStoreException,
 			NoSuchAlgorithmException, CertificateException, IOException,
 			UnrecoverableEntryException {
 		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
 		String pwd = "mypkpassword";
 		FileInputStream fileInputStream = null;
-		fileInputStream = new FileInputStream(
-				"/home/gayashan/wso2/devs/BOEING-X509/service_keystore.jks");
+		fileInputStream = new FileInputStream("/tmp/service_keystore.jks");
 		keyStore.load(fileInputStream, pwd.toCharArray());
 		fileInputStream.close();
 
@@ -197,9 +252,19 @@ public class SecuredSample extends HttpServlet {
 		return certificate.getPublicKey();
 	}
 
+	/***
+	 * Generate the encrypted JWT using the signed JWT and the server's public
+	 * key
+	 * 
+	 * @param signedJWT
+	 *            - the signed JWT
+	 * @param serverPublicKey
+	 *            - public key of the server
+	 * @return - encrypted JWT as a string
+	 * @throws JOSEException
+	 */
 	private String getEncryptedJWT(SignedJWT signedJWT,
 			PublicKey serverPublicKey) throws JOSEException {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 		JWEHeader jweHeader = new JWEHeader(JWEAlgorithm.RSA_OAEP,
 				EncryptionMethod.A128CBC_HS256);
 		Payload payload = new Payload(signedJWT);
@@ -208,14 +273,23 @@ public class SecuredSample extends HttpServlet {
 		return jweObject.serialize();
 	}
 
+	/***
+	 * Load the client's key pair from the key store
+	 * 
+	 * @return - the client's key pair
+	 * @throws KeyStoreException
+	 * @throws IOException
+	 * @throws NoSuchAlgorithmException
+	 * @throws CertificateException
+	 * @throws UnrecoverableEntryException
+	 */
 	private KeyPair loadClientKeyPair() throws KeyStoreException, IOException,
 			NoSuchAlgorithmException, CertificateException,
 			UnrecoverableEntryException {
 		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
 		String pwd = "mykspwd";
 		FileInputStream fileInputStream = null;
-		fileInputStream = new FileInputStream(
-				"/home/gayashan/wso2/devs/RESTSecurityHandler/src/main/resources/client-keystore.jks");
+		fileInputStream = new FileInputStream("/tmp/client-keystore.jks");
 		keyStore.load(fileInputStream, pwd.toCharArray());
 		fileInputStream.close();
 
@@ -233,6 +307,21 @@ public class SecuredSample extends HttpServlet {
 		return keyPair;
 	}
 
+	/***
+	 * Return the signed JWT given the payload and the client's public key and
+	 * private key
+	 * 
+	 * @param payload
+	 *            - the payload to the intended REST endpoint, must be stored in
+	 *            the JWT claims set with the key "payload"
+	 * @param publicKey
+	 *            - to be sent with the x5c parameter of the JWS which will be
+	 *            used in server side for verification of signature
+	 * @param privateKey
+	 *            - the client's private key to be used for signing the JWS
+	 * @return - a Signed JWT object
+	 * @throws JOSEException
+	 */
 	private SignedJWT getSignedJWT(String payload, PublicKey publicKey,
 			PrivateKey privateKey) throws JOSEException {
 		// claims generation
@@ -260,17 +349,20 @@ public class SecuredSample extends HttpServlet {
 		JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.RS256)
 				.x509CertChain(certChain).build();
 
-		log.info(jwtClaims.toJSONObject());
-		
 		// sign header + payload
 		SignedJWT signedJWT = new SignedJWT(jwsHeader, jwtClaims);
-
 		JWSSigner jwsSigner = new RSASSASigner((RSAPrivateKey) privateKey);
 		signedJWT.sign(jwsSigner);
 
 		return signedJWT;
 	}
 
+	/***
+	 * Read the payload from an input stream
+	 * 
+	 * @param inputStream
+	 * @return
+	 */
 	private String readPayload(InputStream inputStream) {
 		BufferedReader bufferedReader;
 		bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
