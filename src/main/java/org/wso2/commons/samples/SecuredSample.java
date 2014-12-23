@@ -118,7 +118,7 @@ public class SecuredSample extends HttpServlet {
 			SignedJWT signedJWT = getSignedJWT(null, clientKeyPair.getPublic(),
 					clientKeyPair.getPrivate());
 			// create the new url with the token as a URL param
-			URL url = new URL(serviceURL + "employee/4001?tok="
+			URL url = new URL(serviceURL + "employee/1002?tok="
 					+ signedJWT.serialize());
 
 			URLConnection connection = url.openConnection();
@@ -171,7 +171,7 @@ public class SecuredSample extends HttpServlet {
 		KeyPair clientKeyPair;
 		// create a new JSON payload
 		String payload = "{\n" + "  \"_putemployee\": {\n"
-				+ "    \"employeeNumber\" : \"4001\",\n"
+				+ "    \"employeeNumber\" : \"1002\",\n"
 				+ "    \"lastName\": \"Samith\",\n"
 				+ "    \"firstName\": \"Will\",\n"
 				+ "    \"email\": \"will@samith.com\",\n"
