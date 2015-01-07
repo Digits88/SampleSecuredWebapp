@@ -237,7 +237,7 @@ public class SecuredSample extends HttpServlet {
 		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
 		String pwd = "mypkpassword";
 		FileInputStream fileInputStream = null;
-		fileInputStream = new FileInputStream("/tmp/service_keystore.jks");
+		fileInputStream = new FileInputStream("/tmp/service-keystore.jks");
 		keyStore.load(fileInputStream, pwd.toCharArray());
 		fileInputStream.close();
 
